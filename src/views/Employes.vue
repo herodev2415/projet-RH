@@ -1,156 +1,338 @@
 <template>
-  <section class="page employes">
-    <h1>Gestion des Employés</h1>
-    <div class="actions">
-      <button @click="ajouterEmploye">➕ Ajouter un employé</button>
+  <div class="employe-container">
+    <!-- Colonne Gauche : Formulaire -->
+    <div class="employe-form">
+      <h2>{{ editIndex === null ? 'Ajouter un employé' : 'Modifier un employé' }}</h2>
+      <form @submit.prevent="ajouterEmploye">
+        <!-- Identité -->
+        <div class="form-section">
+          <h3>Identité</h3>
+          <input v-model="form.nom" type="text" placeholder="Nom" required />
+          <input v-model="form.prenom" type="text" placeholder="Prénom" required />
+          <select v-model="form.sexe" required>
+            <option value="" disabled>Sexe</option>
+            <option>Homme</option>
+            <option>Femme</option>
+          </select>
+          <input v-model="form.dateNaissance" type="date" />
+        </div>
+
+        <!-- Coordonnées -->
+        <div class="form-section">
+          <h3>Coordonnées</h3>
+          <input v-model="form.email" type="email" placeholder="Email professionnel" />
+          <input v-model="form.telephone" type="tel" placeholder="Téléphone" />
+        </div>
+
+        <!-- Situation professionnelle -->
+        <div class="form-section">
+          <h3>Situation professionnelle</h3>
+          <input v-model="form.poste" type="text" placeholder="Poste" required />
+          <input v-model="form.departement" type="text" placeholder="Département" />
+          <select v-model="form.contrat" required>
+            <option value="" disabled>Type de contrat</option>
+            <option>CDI</option>
+            <option>CDD</option>
+            <option>Stage</option>
+          </select>
+          <input v-model="form.dateEmbauche" type="date" />
+        </div>
+
+        <!-- Compétences -->
+        <div class="form-section">
+          <h3>Compétences</h3>
+          <div class="skills-input">
+            <input
+              v-model="newSkill"
+              type="text"
+              placeholder="Ajouter une compétence"
+              @keyup.enter="ajouterCompetence"
+            />
+            <button type="button" @click="ajouterCompetence">+</button>
+          </div>
+          <div class="skills-tags">
+            <span
+              v-for="(skill, i) in form.competences"
+              :key="i"
+              class="skill-tag"
+            >
+              {{ skill }}
+              <button type="button" @click="supprimerCompetence(i)">✕</button>
+            </span>
+          </div>
+        </div>
+
+        <button type="submit">
+          {{ editIndex === null ? 'Ajouter' : 'Enregistrer les modifications' }}
+        </button>
+        <p v-if="message" style="color: #00ff99; margin-top: 1rem;">{{ message }}</p>
+      </form>
     </div>
-    <div class="table-container">
-      <table>
-        <thead>
-          <tr>
-            <th>Nom</th>
-            <th>Poste</th>
-            <th>Département</th>
-            <th>Email</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(employe, index) in employes" :key="employe.id">
-            <td>{{ employe.nom }}</td>
-            <td>{{ employe.poste }}</td>
-            <td>{{ employe.departement }}</td>
-            <td>{{ employe.email }}</td>
-            <td>
-              <button @click="modifierEmploye(index)">✏️ Modifier</button>
-              <button @click="supprimerEmploye(index)">🗑️ Supprimer</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+
+    <!-- Colonne Droite : Liste des employés -->
+    <div class="employe-liste">
+      <input type="text" v-model="search" placeholder="Rechercher..." class="search-input" />
+      <select v-model="departementFiltre" class="search-input">
+        <option value="">Tous les départements</option>
+        <option v-for="dep in departementsDisponibles" :key="dep">{{ dep }}</option>
+      </select>
+      <h3 class="liste-titre">Liste des employés</h3>
+      <ul>
+        <li v-for="(emp, index) in filteredEmployes" :key="index">
+          <strong>{{ emp.nom }} {{ emp.prenom }}</strong><br />
+          {{ emp.poste }} — {{ emp.departement }}<br />
+          Contrat : {{ emp.contrat }} | Embauché le : {{ emp.dateEmbauche }}
+          <br />
+          <button type="button" @click="modifierEmploye(index)">Modifier</button>
+          <button type="button" @click="supprimerEmploye(index)">Supprimer</button>
+        </li>
+      </ul>
     </div>
-  </section>
+  </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 
-const employes = ref([])
+const search = ref('')
+const newSkill = ref('')
+const message = ref('')
+const departementFiltre = ref('')
+const editIndex = ref(null) // null = ajout, sinon index modifié
 
-onMounted(() => {
-  const saved = localStorage.getItem('employes')
-  employes.value = saved ? JSON.parse(saved) : []
+const form = ref({
+  nom: '',
+  prenom: '',
+  sexe: '',
+  dateNaissance: '',
+  email: '',
+  telephone: '',
+  poste: '',
+  departement: '',
+  contrat: '',
+  dateEmbauche: '',
+  competences: []
 })
 
-function enregistrer() {
-  localStorage.setItem('employes', JSON.stringify(employes.value))
+const employes = ref(JSON.parse(localStorage.getItem('employes') || '[]'))
+
+const departementsDisponibles = computed(() => {
+  const deps = employes.value.map(emp => emp.departement).filter(Boolean)
+  return [...new Set(deps)]
+})
+
+const filteredEmployes = computed(() => {
+  return employes.value.filter(emp => {
+    const fullName = `${emp.nom} ${emp.prenom}`.toLowerCase()
+    const matchSearch = fullName.includes(search.value.toLowerCase())
+    const matchDep = departementFiltre.value ? emp.departement === departementFiltre.value : true
+    return matchSearch && matchDep
+  })
+})
+
+function ajouterCompetence() {
+  const skill = newSkill.value.trim()
+  if (skill && !form.value.competences.includes(skill)) {
+    form.value.competences.push(skill)
+    newSkill.value = ''
+  }
+}
+
+function supprimerCompetence(index) {
+  form.value.competences.splice(index, 1)
+}
+
+function resetForm() {
+  Object.keys(form.value).forEach(k => (form.value[k] = k === 'competences' ? [] : ''))
+  newSkill.value = ''
 }
 
 function ajouterEmploye() {
-  const nom = prompt("Nom ?")
-  const poste = prompt("Poste ?")
-  const departement = prompt("Département ?")
-  const email = prompt("Email ?")
-  if (nom && poste && departement && email) {
-    employes.value.push({
-      id: Date.now(), nom, poste, departement, email
-    })
-    enregistrer()
+  if (editIndex.value === null) {
+    // ajout
+    employes.value.push({ ...form.value })
+    message.value = 'Employé ajouté avec succès ✅'
+  } else {
+    // modification
+    employes.value[editIndex.value] = { ...form.value }
+    message.value = 'Employé modifié avec succès ✅'
+    editIndex.value = null
   }
+  localStorage.setItem('employes', JSON.stringify(employes.value))
+  resetForm()
+  setTimeout(() => (message.value = ''), 3000)
 }
 
 function modifierEmploye(index) {
-  const e = employes.value[index]
-  const nom = prompt("Nom ?", e.nom)
-  const poste = prompt("Poste ?", e.poste)
-  const departement = prompt("Département ?", e.departement)
-  const email = prompt("Email ?", e.email)
-  if (nom && poste && departement && email) {
-    employes.value[index] = { ...e, nom, poste, departement, email }
-    enregistrer()
-  }
+  const emp = employes.value[index]
+  Object.keys(form.value).forEach(k => {
+    form.value[k] = Array.isArray(emp[k]) ? [...emp[k]] : emp[k]
+  })
+  editIndex.value = index
+  message.value = ''
 }
 
 function supprimerEmploye(index) {
-  if (confirm("Supprimer cet employé ?")) {
+  if (confirm('Confirmer la suppression de cet employé ?')) {
     employes.value.splice(index, 1)
-    enregistrer()
+    localStorage.setItem('employes', JSON.stringify(employes.value))
+    if (editIndex.value === index) {
+      resetForm()
+      editIndex.value = null
+    }
+    message.value = 'Employé supprimé ✅'
+    setTimeout(() => (message.value = ''), 3000)
   }
 }
 </script>
 
 <style scoped>
-.page {
-  padding: 2rem;
-  color: #e0e0e0;
+/* Ton style inchangé */
+.employe-container {
+  display: flex;
+  flex-direction: row;
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 2rem auto;
   background-color: #121212;
-  min-height: 100vh;
+  padding: 2rem;
+  border-radius: 14px;
+  box-shadow: 0 0 20px rgba(0, 188, 212, 0.2);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #eee;
 }
 
-h1 {
-  font-size: 2rem;
-  color: #ffffff;
+.employe-form {
+  flex: 1;
+  background-color: #1f1f1f;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: inset 0 0 8px #00bcd4aa;
+}
+
+.employe-liste {
+  flex: 2; /* <-- liste 2x plus large */
+  background-color: #1f1f1f;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: inset 0 0 8px #00bcd4aa;
+}
+
+.employe-form h2,
+.liste-titre {
+  color: #00bcd4;
+  text-align: center;
+  text-transform: uppercase;
+  font-size: 1.3rem;
   margin-bottom: 1.5rem;
 }
 
-.actions {
+.form-section {
+  margin-bottom: 2rem;
+}
+
+.form-section h3 {
   margin-bottom: 1rem;
+  color: #00bcd4;
+  border-bottom: 1px solid #00bcd4;
+  padding-bottom: 0.3rem;
 }
 
-.actions button {
-  background-color: #03dac6;
-  color: #121212;
-  border: none;
-  padding: 0.6rem 1.2rem;
-  border-radius: 8px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.actions button:hover {
-  background-color: #00bfa5;
-}
-
-.table-container {
-  overflow-x: auto;
-  background-color: #1e1e1e;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  padding: 1rem;
-}
-
-table {
+input,
+select {
+  display: block;
   width: 100%;
-  border-collapse: collapse;
-  color: #e0e0e0;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: 12px;
+  border: none;
+  font-size: 1rem;
+  background-color: #3a3a3a;
+  color: #eee;
 }
 
-thead {
-  background-color: #2c2c2c;
-}
-
-th, td {
+button {
+  width: 100%;
   padding: 1rem;
-  text-align: left;
-  border-bottom: 1px solid #3a3a3a;
+  background-color: #00bcd4;
+  color: white;
+  font-weight: 700;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  font-size: 1.1rem;
 }
 
-tbody tr:hover {
-  background-color: #2a2a2a;
+.search-input {
+  width: 100%;
+  padding: 0.7rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: 12px;
+  border: none;
+  outline: none;
+  font-size: 1rem;
+  background-color: #2b2b2b;
+  color: #ddd;
 }
 
-td button {
+.employe-liste ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 600px;
+  overflow-y: auto;
+  border-top: 1px solid #333;
+  border-bottom: 1px solid #333;
+  scrollbar-width: thin;
+  scrollbar-color: #00bcd4 transparent;
+}
+
+.employe-liste li {
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid #444;
+  color: #ccc;
+}
+
+.skills-input {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.skills-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.skill-tag {
+  background-color: #00bcd4;
+  color: #121212;
+  padding: 0.3rem 0.6rem;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+}
+
+.skill-tag button {
   background: none;
   border: none;
-  color: #03dac6;
-  font-size: 1.1rem;
-  margin-right: 0.5rem;
+  margin-left: 0.4rem;
   cursor: pointer;
-  transition: opacity 0.3s;
+  color: #121212;
+  font-weight: bold;
 }
 
-td button:hover {
-  opacity: 0.6;
+.employe-liste button {
+  width: auto;
+  margin-right: 0.5rem;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.9rem;
+  border-radius: 8px;
+}
+
+@media (max-width: 900px) {
+  .employe-container {
+    flex-direction: column;
+  }
 }
 </style>

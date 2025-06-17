@@ -2,17 +2,31 @@
   <section class="dashboard">
     <h1>Tableau de bord</h1>
     <p>Bienvenue sur votre espace de gestion RH.</p>
+
     <div class="stats">
-      <div class="stat-card" v-for="(item, index) in stats" :key="index">
-        <h2>{{ item.label }}</h2>
-        <p>{{ item.value }}</p>
-      </div>
+      <CardStat
+        v-for="(item, index) in stats"
+        :key="index"
+        :title="item.label"
+        :value="item.value"
+        :color="item.color"
+      />
+    </div>
+
+    <div class="widgets">
+      <CongesChart />
+      <AlertsRH />
+      <QuickActions />
     </div>
   </section>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import CardStat from '@/components/CardStat.vue'
+import CongesChart from '@/components/CongesChart.vue'
+import AlertsRH from '@/components/AlertsRH.vue'
+import QuickActions from '@/components/QuickActions.vue'
 
 const employes = ref([])
 const presences = ref([])
@@ -46,56 +60,88 @@ const nombreConges = computed(() =>
 const nombreEvaluations = computed(() => evaluations.value.length)
 
 const stats = computed(() => [
-  { label: "Employés", value: nombreEmployes.value },
-  { label: "Congés en cours", value: nombreConges.value },
-  { label: "Présences aujourd'hui", value: nombrePresents.value },
-  { label: "Évaluations", value: nombreEvaluations.value }
+  { label: "Employés", value: nombreEmployes.value, color: "#1e88e5" },
+  { label: "Congés en cours", value: nombreConges.value, color: "#f4511e" },
+  { label: "Présences aujourd'hui", value: nombrePresents.value, color: "#43a047" },
+  { label: "Évaluations", value: nombreEvaluations.value, color: "#9c27b0" }
 ])
 </script>
 
 <style scoped>
 .dashboard {
-  padding: 1.5rem 2rem;
+  padding: 1rem 1rem 0.5rem 1rem;
   color: #e0e0e0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* plus de scroll global */
+  box-sizing: border-box;
 }
 
 h1 {
   color: #ffffff;
-  font-size: 2rem;
+  font-size: 1.8rem;
+  margin-bottom: 0.3rem;
+}
+
+p {
+  margin-top: 0;
   margin-bottom: 1rem;
+  color: #bbbbbb;
+  font-size: 1rem;
 }
 
 .stats {
   display: flex;
-  flex-wrap: wrap;
-  gap: 1.5rem;
+  gap: 0.8rem;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  margin-bottom: 1rem;
 }
 
-.stat-card {
-  background: #212121;
+.stats >>> .stat-card {
+  flex: 1 1 150px;
+  padding: 1rem 1rem;
+  font-size: 0.85rem;
+  min-height: 80px;
+}
+
+.stats >>> .stat-card h2 {
+  font-size: 1rem;
+}
+
+.stats >>> .stat-card p {
+  font-size: 1.5rem;
+}
+
+.widgets {
+  display: flex;
+  gap: 1rem;
+  flex: 1;
+  overflow: hidden; /* plus de scroll dans widgets */
+  min-height: 0;
+  flex-direction: column;
+}
+
+@media (min-width: 900px) {
+  .widgets {
+    flex-direction: row;
+  }
+}
+
+.widgets > * {
+  flex: 1;
+  height: 240px; /* hauteur fixe réduite */
+  overflow: hidden;
+  background-color: #2a2a2a;
   border-radius: 12px;
-  padding: 1.5rem;
-  flex: 1 1 220px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  transition: transform 0.2s;
-  text-align: center;
+  padding: 0.8rem 1rem;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
 }
 
-.stat-card:hover {
-  transform: translateY(-4px);
-}
-
-.stat-card h2 {
-  color: #bbbbbb;
-  margin-bottom: 0.5rem;
-  font-size: 1.1rem;
-  font-weight: 600;
-}
-
-.stat-card p {
-  color: #03dac6;
-  font-size: 2.2rem;
-  margin: 0;
-  font-weight: bold;
+/* Limite la taille du canvas dans CongesChart */
+.widgets canvas {
+  max-height: 200px !important;
+  max-width: 100% !important;
 }
 </style>

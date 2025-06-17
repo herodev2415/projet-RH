@@ -36,46 +36,51 @@ function confirmLogout() {
 <style scoped>
 .navbar {
   height: 70px;
-  background: linear-gradient(to right, #003366, #005fa3);
-  color: white;
+  background-color: #1f1f1f;
+  color: #eee;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0 2rem;
   font-weight: 500;
   font-size: 1.05rem;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 10px rgba(0, 188, 212, 0.1);
+  border-bottom: 1px solid #333;
 }
+
 .logo {
   display: flex;
   align-items: center;
   font-size: 1.4rem;
   font-weight: 700;
-  gap: 0.6rem;
+  color: #00bcd4;
 }
+
 .user-info {
   display: flex;
   align-items: center;
   gap: 1.2rem;
 }
+
 .logout-btn {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background-color: white;
-  color: #003366;
-  border: none;
+  background-color: #2c2c2c;
+  color: #00bcd4;
+  border: 1px solid #00bcd4;
   padding: 8px 16px;
   border-radius: 24px;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.3s ease, color 0.3s ease;
-  box-shadow: 0 2px 6px rgba(0, 64, 112, 0.2);
+  transition: all 0.3s ease;
 }
+
 .logout-btn:hover {
-  background-color: #f0f4f8;
-  color: #001d3d;
+  background-color: #00bcd4;
+  color: #1f1f1f;
 }
+
 .icon-logout {
   width: 20px;
   height: 20px;

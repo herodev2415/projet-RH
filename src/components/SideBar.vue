@@ -23,18 +23,22 @@ const links = [
 
 <style scoped>
 .sidebar {
-  width: 240px;
+  width: 180px; /* largeur réduite de 240px à 180px */
   background-color: #1a1a1a;
   color: #ffffff;
-  padding: 2rem 1rem;
+  padding: 1.2rem 0.8rem; /* padding réduit */
   height: 100vh;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* centre le contenu */
 }
 
 .sidebar ul {
   list-style: none;
   padding: 0;
   margin: 0;
+  width: 100%;
 }
 
 .sidebar li {
@@ -43,12 +47,17 @@ const links = [
 
 .sidebar-link {
   display: block;
-  padding: 12px 18px;
+  padding: 10px 12px; /* padding réduit */
   color: #bbbbbb;
   border-radius: 8px;
   text-decoration: none;
   font-weight: 500;
+  font-size: 0.9rem; /* taille de police réduite */
   transition: background-color 0.3s, color 0.3s;
+  text-align: center; /* centre le texte */
+  white-space: nowrap; /* évite le retour à la ligne */
+  overflow: hidden;
+  text-overflow: ellipsis; /* coupe texte trop long */
 }
 
 .sidebar-link:hover {
@@ -59,6 +68,6 @@ const links = [
 .active-link {
   background-color: #03dac6;
   color: #000000 !important;
-  font-weight: bold;
+  font-weight: 700;
 }
 </style>

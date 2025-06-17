@@ -1,222 +1,252 @@
 <template>
-  <section class="page contrats">
-    <h1>Gestion des Contrats</h1>
+  <div class="contrat-container">
+    <!-- Formulaire -->
+    <div class="contrat-form">
+      <h2>{{ editIndex === null ? 'Ajouter un contrat' : 'Modifier le contrat' }}</h2>
+      <form @submit.prevent="ajouterContrat">
+        <div style="position: relative;">
+          <input
+            v-model="form.nom"
+            @input="updateSuggestions"
+            type="text"
+            placeholder="Nom de l’employé"
+            autocomplete="off"
+            required
+          />
+          <ul v-if="suggestions.length" class="autocomplete-list">
+            <li
+              v-for="(s, i) in suggestions"
+              :key="i"
+              @click="selectSuggestion(s.nom)"
+            >
+              {{ s.nom }}
+            </li>
+          </ul>
+        </div>
 
-    <form @submit.prevent="ajouterContrat" class="form">
-      <input v-model="nouveauContrat.employe" placeholder="Employé" required />
+        <input v-model="form.type" type="text" placeholder="Type de contrat (CDI, CDD...)" required />
+        <input v-model="form.dateDebut" type="date" placeholder="Date de début" />
+        <input v-model="form.dateFin" type="date" placeholder="Date de fin" />
+        <input v-model="form.salaire" type="number" placeholder="Salaire" />
 
-      <select v-model="nouveauContrat.type" required>
-        <option value="">-- Sélectionner le type --</option>
-        <option>CDI</option>
-        <option>CDD</option>
-        <option>Stage</option>
-        <option>Autre</option>
-      </select>
-      <input
-        v-if="nouveauContrat.type === 'Autre'"
-        v-model="nouveauContrat.type"
-        placeholder="Précisez le type"
-        required
-      />
+        <button type="submit">
+          {{ editIndex === null ? 'Ajouter' : 'Enregistrer les modifications' }}
+        </button>
+        <p v-if="message" style="color: #00ff99; margin-top: 1rem;">{{ message }}</p>
+      </form>
+    </div>
 
-      <input v-model="nouveauContrat.dateDebut" type="date" required />
-      <input v-model="nouveauContrat.dateFin" type="date" required />
-
-      <select v-model="nouveauContrat.statut" required>
-        <option value="">-- Sélectionner le statut --</option>
-        <option>Actif</option>
-        <option>En cours</option>
-        <option>Terminé</option>
-        <option>Autre</option>
-      </select>
-      <input
-        v-if="nouveauContrat.statut === 'Autre'"
-        v-model="nouveauContrat.statut"
-        placeholder="Précisez le statut"
-        required
-      />
-
-      <button type="submit">Ajouter</button>
-    </form>
-
-    <table>
-      <thead>
-        <tr>
-          <th>Employé</th>
-          <th>Type</th>
-          <th>Date début</th>
-          <th>Date fin</th>
-          <th>Statut</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="contrat in contrats" :key="contrat.id">
-          <td>{{ contrat.employe }}</td>
-          <td>{{ contrat.type }}</td>
-          <td>{{ contrat.dateDebut }}</td>
-          <td>{{ contrat.dateFin }}</td>
-          <td>{{ contrat.statut }}</td>
-          <td class="actions">
-            <button class="btn-modifier" @click="modifierContrat(contrat)">Modifier</button>
-            <button class="btn-supprimer" @click="supprimerContrat(contrat.id)">Supprimer</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </section>
+    <!-- Liste -->
+    <div class="contrat-liste">
+      <h3 class="liste-titre">Liste des contrats</h3>
+      <ul>
+        <li v-for="(c, index) in contrats" :key="index">
+          <strong>{{ c.nom }}</strong><br />
+          Type : {{ c.type }}<br />
+          Du {{ c.dateDebut }} au {{ c.dateFin }}<br />
+          Salaire : {{ c.salaire }} Ar<br />
+          <button @click="modifierContrat(index)">Modifier</button>
+          <button @click="supprimerContrat(index)">Supprimer</button>
+        </li>
+      </ul>
+    </div>
+  </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref } from 'vue'
 
-const contrats = ref([]);
-const nouveauContrat = ref({
-  id: null,
-  employe: '',
+const form = ref({
+  nom: '',
   type: '',
   dateDebut: '',
   dateFin: '',
-  statut: ''
-});
+  salaire: ''
+})
 
-onMounted(() => {
-  const sauvegarde = localStorage.getItem('contrats');
-  contrats.value = sauvegarde ? JSON.parse(sauvegarde) : [];
-});
+const contrats = ref(JSON.parse(localStorage.getItem('contrats') || '[]'))
+const employes = ref(JSON.parse(localStorage.getItem('employes') || '[]'))
+const suggestions = ref([])
 
-watch(contrats, (val) => {
-  localStorage.setItem('contrats', JSON.stringify(val));
-}, { deep: true });
-
-function ajouterContrat() {
-  if (nouveauContrat.value.id !== null) {
-    const index = contrats.value.findIndex(c => c.id === nouveauContrat.value.id);
-    if (index !== -1) contrats.value[index] = { ...nouveauContrat.value };
-  } else {
-    nouveauContrat.value.id = Date.now();
-    contrats.value.push({ ...nouveauContrat.value });
-  }
-  resetForm();
-}
-
-function modifierContrat(contrat) {
-  nouveauContrat.value = { ...contrat };
-}
-
-function supprimerContrat(id) {
-  contrats.value = contrats.value.filter(c => c.id !== id);
-}
+const editIndex = ref(null)
+const message = ref('')
 
 function resetForm() {
-  nouveauContrat.value = {
-    id: null,
-    employe: '',
-    type: '',
-    dateDebut: '',
-    dateFin: '',
-    statut: ''
-  };
+  form.value = { nom: '', type: '', dateDebut: '', dateFin: '', salaire: '' }
+}
+
+function ajouterContrat() {
+  if (editIndex.value === null) {
+    contrats.value.push({ ...form.value })
+    message.value = 'Contrat ajouté ✅'
+  } else {
+    contrats.value[editIndex.value] = { ...form.value }
+    message.value = 'Contrat modifié ✅'
+    editIndex.value = null
+  }
+  localStorage.setItem('contrats', JSON.stringify(contrats.value))
+  resetForm()
+  setTimeout(() => (message.value = ''), 3000)
+}
+
+function modifierContrat(index) {
+  form.value = { ...contrats.value[index] }
+  editIndex.value = index
+  message.value = ''
+}
+
+function supprimerContrat(index) {
+  if (confirm('Supprimer ce contrat ?')) {
+    contrats.value.splice(index, 1)
+    localStorage.setItem('contrats', JSON.stringify(contrats.value))
+    message.value = 'Contrat supprimé ✅'
+    resetForm()
+    editIndex.value = null
+    setTimeout(() => (message.value = ''), 3000)
+  }
+}
+
+function updateSuggestions() {
+  const query = form.value.nom.toLowerCase()
+  suggestions.value = query
+    ? employes.value.filter(e =>
+        e.nom.toLowerCase().includes(query)
+      ).slice(0, 5)
+    : []
+}
+
+function selectSuggestion(nom) {
+  form.value.nom = nom
+  suggestions.value = []
 }
 </script>
 
 <style scoped>
-.page {
+/* Fond global foncé */
+body {
+  background-color: #121212;
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #eee;
+}
+
+.contrat-container {
+  display: flex;
+  flex-direction: row;
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 2rem auto;
+  background-color: #121212;
   padding: 2rem;
-  color: #004070;
+  border-radius: 14px;
+  box-shadow: 0 0 20px rgba(0, 188, 212, 0.2);
+  color: #eee;
 }
 
-h1 {
-  margin-bottom: 1.5rem;
-  font-weight: 700;
-}
-
-.form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 2rem;
-}
-
-.form input,
-.form select {
-  padding: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 6px;
+.contrat-form {
   flex: 1;
+  background-color: #1f1f1f;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: inset 0 0 8px #00bcd4aa;
 }
 
-.form button {
-  background-color: #004070;
-  color: white;
-  border: none;
-  padding: 0.6rem 1.2rem;
-  border-radius: 6px;
-  cursor: pointer;
+.contrat-liste {
+  flex: 2;
+  background-color: #1f1f1f;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: inset 0 0 8px #00bcd4aa;
 }
 
-.form button:hover {
-  background-color: #0060a0;
+h2,
+.liste-titre {
+  color: #00bcd4;
+  text-align: center;
+  text-transform: uppercase;
+  font-size: 1.3rem;
+  margin-bottom: 1.5rem;
 }
 
-table {
+input,
+select {
+  display: block;
   width: 100%;
-  border-collapse: collapse;
-  background-color: #f5f7fa;
-  border-radius: 10px;
-  box-shadow: 0 4px 10px rgb(0 64 112 / 0.1);
-  overflow: hidden;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  border-radius: 12px;
+  border: none;
+  font-size: 1rem;
+  background-color: #3a3a3a;
+  color: #eee;
 }
 
-thead {
-  background-color: #004070;
-  color: white;
-}
-
-th,
-td {
+button {
+  width: 100%;
   padding: 1rem;
-  text-align: left;
-  border-bottom: 1px solid #b0c4de;
-}
-
-tbody tr:hover {
-  background-color: #dde7f3;
-  cursor: pointer;
-}
-
-.actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.btn-modifier {
-  background-color: #2a82da;
+  background-color: #00bcd4;
   color: white;
+  font-weight: 700;
   border: none;
-  padding: 0.4rem 1rem;
-  border-radius: 6px;
-  font-weight: 500;
+  border-radius: 14px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  font-size: 1.1rem;
 }
 
-.btn-modifier:hover {
-  background-color: #1f6db5;
+.contrat-liste ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 600px;
+  overflow-y: auto;
+  border-top: 1px solid #333;
+  border-bottom: 1px solid #333;
+  scrollbar-width: thin;
+  scrollbar-color: #00bcd4 transparent;
 }
 
-.btn-supprimer {
-  background-color: #d9364f;
-  color: white;
-  border: none;
-  padding: 0.4rem 1rem;
-  border-radius: 6px;
-  font-weight: 500;
+.contrat-liste li {
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid #444;
+  color: #ccc;
+}
+
+.contrat-liste button {
+  width: auto;
+  margin-right: 0.5rem;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.9rem;
+  border-radius: 8px;
+}
+
+.autocomplete-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  background: #2c2c2c;
+  border: 1px solid #00bcd4;
+  border-radius: 8px;
+  max-height: 160px;
+  overflow-y: auto;
+  z-index: 10;
+}
+
+.autocomplete-list li {
+  padding: 0.5rem 1rem;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  color: #eee;
 }
 
-.btn-supprimer:hover {
-  background-color: #b32b3f;
+.autocomplete-list li:hover {
+  background-color: #00bcd4;
+  color: #000;
+}
+
+@media (max-width: 900px) {
+  .contrat-container {
+    flex-direction: column;
+  }
 }
 </style>
