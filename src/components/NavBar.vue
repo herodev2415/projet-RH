@@ -20,7 +20,7 @@
 </template>
 
 <script setup>
-import { user } from '../stores/auth'
+import { user } from '@/stores/auth.js'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()

@@ -4,15 +4,14 @@ export const user = reactive({
   isAuthenticated: false,
   login() {
     this.isAuthenticated = true
-    localStorage.setItem('isAuthenticated', 'true')
+    localStorage.setItem('auth', 'true')
   },
   logout() {
     this.isAuthenticated = false
-    localStorage.removeItem('isAuthenticated')
+    localStorage.removeItem('auth')
   }
 })
 
 export function initAuth() {
-  const stored = localStorage.getItem('isAuthenticated')
-  user.isAuthenticated = stored === 'true'
+  user.isAuthenticated = localStorage.getItem('auth') === 'true'
 }
