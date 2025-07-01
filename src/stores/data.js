@@ -1,30 +1,21 @@
 // store.js
-import { ref } from 'vue'
+import { ref, watch  } from 'vue'
 
 export const employes = ref(JSON.parse(localStorage.getItem('employes') || '[]'))
 export const contrats = ref(JSON.parse(localStorage.getItem('contrats') || '[]'))
+export const conges = ref(JSON.parse(localStorage.getItem('conges') || '[]'))
+export const evaluations = ref(JSON.parse(localStorage.getItem('evaluations') || '[]'))
+export const presences = ref(JSON.parse(localStorage.getItem('presences') || '[]'))  // <-- Ajoute cette ligne
 
-// Sauvegarde automatique dans localStorage à chaque modification
-function saveToLocalStorage() {
-  localStorage.setItem('employes', JSON.stringify(employes.value))
-  localStorage.setItem('contrats', JSON.stringify(contrats.value))
-}
+// Sauvegarder automatiquement dans localStorage à chaque modification
+watch(employes, (val) => {
+  localStorage.setItem('employes', JSON.stringify(val))
+}, { deep: true })
 
-// Surveiller les changements (simple watcher)
-employes.value = new Proxy(employes.value, {
-  set(target, property, value) {
-    target[property] = value
-    saveToLocalStorage()
-    return true
-  }
-})
-contrats.value = new Proxy(contrats.value, {
-  set(target, property, value) {
-    target[property] = value
-    saveToLocalStorage()
-    return true
-  }
-})
+watch(contrats, (val) => {
+  localStorage.setItem('contrats', JSON.stringify(val))
+}, { deep: true })
 
-// Une autre solution plus simple : appeler manuellement saveToLocalStorage() après chaque modification dans tes composants
-
+watch(conges, (val) => {
+  localStorage.setItem('conges', JSON.stringify(val))
+}, { deep: true })

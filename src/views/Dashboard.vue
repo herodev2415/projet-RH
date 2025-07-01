@@ -27,11 +27,10 @@ import CardStat from '@/components/CardStat.vue'
 import CongesChart from '@/components/CongesChart.vue'
 import AlertsRH from '@/components/AlertsRH.vue'
 import QuickActions from '@/components/QuickActions.vue'
+import { conges, employes, presences, evaluations } from '../stores/data.js'
 
-const employes = ref([])
-const presences = ref([])
-const conges = ref([])
-const evaluations = ref([])
+
+
 
 function normalize(str) {
   return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, "").trim()
