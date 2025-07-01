@@ -1,17 +1,30 @@
+// store.js
 import { ref } from 'vue'
 
-// Données partagées
-export const contrats = ref([])
-export const employes = ref([])
+export const employes = ref(JSON.parse(localStorage.getItem('employes') || '[]'))
+export const contrats = ref(JSON.parse(localStorage.getItem('contrats') || '[]'))
 
-
-// Méthodes
-export const loadData = async () => {
-  // Simulation de chargement
-  contrats.value = [{id: 1, nom: "Contrat 1"}]
-  employes.value = [{id: 1, nom: "Employé 1"}]
+// Sauvegarde automatique dans localStorage à chaque modification
+function saveToLocalStorage() {
+  localStorage.setItem('employes', JSON.stringify(employes.value))
+  localStorage.setItem('contrats', JSON.stringify(contrats.value))
 }
 
-export const saveContrats = () => {
-  console.log("Contrats sauvegardés")
-}
+// Surveiller les changements (simple watcher)
+employes.value = new Proxy(employes.value, {
+  set(target, property, value) {
+    target[property] = value
+    saveToLocalStorage()
+    return true
+  }
+})
+contrats.value = new Proxy(contrats.value, {
+  set(target, property, value) {
+    target[property] = value
+    saveToLocalStorage()
+    return true
+  }
+})
+
+// Une autre solution plus simple : appeler manuellement saveToLocalStorage() après chaque modification dans tes composants
+
