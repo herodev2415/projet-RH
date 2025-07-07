@@ -5,7 +5,7 @@
         <input
           v-model="filterEmploye"
           type="text"
-          placeholder="Filtrer par employé"
+          placeholder="recherche ..."
           class="filter-input"
         />
         <select v-model="filterStatut" class="filter-select">
@@ -69,17 +69,14 @@
         <thead>
           <tr>
             <th>Employé</th>
-            <th>Date début</th>
-            <th>Date fin</th>
             <th>Durée (jours)</th>
             <th>Motif</th>
-            <th>Statut</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="conge in filteredConges" :key="conge.id">
-            <td @click="modifierConge(conge.id)" style="cursor:pointer;">
+            <td @click="ouvrirPopup(conge)" style="cursor:pointer; display:flex; align-items:center; gap:8px;">
               <div
                 class="employee-avatar"
                 :style="{ background: `linear-gradient(135deg, ${stringToColor(conge.employe)} 0%, ${stringToColor(conge.employe.split(' ')[1] || '')} 100%)` }"
@@ -88,20 +85,8 @@
               </div>
               <span class="employe-nom">{{ conge.employe }}</span>
             </td>
-            <td @click="modifierConge(conge.id)" style="cursor:pointer;">{{ conge.dateDebut }}</td>
-            <td @click="modifierConge(conge.id)" style="cursor:pointer;">{{ conge.dateFin }}</td>
-            <td @click="modifierConge(conge.id)" style="cursor:pointer;">{{ calcDuree(conge.dateDebut, conge.dateFin) }}</td>
-            <td @click="modifierConge(conge.id)" style="cursor:pointer;">{{ conge.motif || '-' }}</td>
-            <td @click="modifierConge(conge.id)" style="cursor:pointer;">
-              <span
-                :class="['badge', 
-                  conge.statut === 'en attente' ? 'badge-warning' : 
-                  conge.statut === 'validé' ? 'badge-success' : 
-                  'badge-danger']"
-              >
-                {{ conge.statut }}
-              </span>
-            </td>
+            <td>{{ calcDuree(conge.dateDebut, conge.dateFin) }}</td>
+            <td>{{ conge.motif || '-' }}</td>
             <td>
               <button @click.stop="confirmerSuppression(conge.id)">🗑 Supprimer</button>
             </td>
@@ -123,6 +108,29 @@
         </div>
       </div>
     </transition>
+
+    <!-- Modal popup infos détaillées congé -->
+    <transition name="fade">
+      <div v-if="popupVisible" class="modal-overlay" @click.self="fermerPopup">
+        <div class="modal-details" @click.stop>
+          <h3>Détails du congé</h3>
+          <p><strong>Employé :</strong> {{ popupConge.employe }}</p>
+          <p><strong>Date début :</strong> {{ popupConge.dateDebut }}</p>
+          <p><strong>Date fin :</strong> {{ popupConge.dateFin }}</p>
+          <p><strong>Durée :</strong> {{ calcDuree(popupConge.dateDebut, popupConge.dateFin) }} jours</p>
+          <p><strong>Motif :</strong> {{ popupConge.motif || '-' }}</p>
+          <p><strong>Statut :</strong> {{ popupConge.statut }}</p>
+          <p>
+            <strong>Jours restants :</strong> 
+            <span v-if="joursRestants(popupConge.dateFin) > 0">{{ joursRestants(popupConge.dateFin) }} jour(s)</span>
+            <span v-else>Congé terminé</span>
+          </p>
+          <button class="btn-close-popup" @click="fermerPopup">
+            Fermer
+          </button>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -131,7 +139,7 @@ import { ref, computed } from 'vue'
 import { conges, employes } from '../stores/data.js'
 
 const formVisible = ref(false)
-const editId = ref(null) // on stocke l'id, pas l'index
+const editId = ref(null)
 const form = ref({
   id: null,
   employe: '',
@@ -150,6 +158,9 @@ const confirmDelete = ref({
   id: null,
   employe: '',
 })
+
+const popupVisible = ref(false)
+const popupConge = ref({})
 
 function resetForm() {
   form.value = {
@@ -187,7 +198,6 @@ function ajouterOuModifierConge() {
     conges.value.push({ ...form.value })
     message.value = 'Congé ajouté ✅'
   } else {
-    // Trouver index via id
     const index = conges.value.findIndex(c => c.id === editId.value)
     if (index !== -1) {
       conges.value[index] = { ...form.value }
@@ -257,6 +267,23 @@ function calcDuree(dateDebut, dateFin) {
   return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1
 }
 
+function joursRestants(dateFin) {
+  const today = new Date()
+  const fin = new Date(dateFin)
+  const diffTime = fin - today
+  if (diffTime < 0) return 0
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+}
+
+function ouvrirPopup(conge) {
+  popupConge.value = { ...conge }
+  popupVisible.value = true
+}
+
+function fermerPopup() {
+  popupVisible.value = false
+}
+
 const filteredConges = computed(() => {
   let result = conges.value.slice()
 
@@ -273,8 +300,6 @@ const filteredConges = computed(() => {
 </script>
 
 <style scoped>
-/* (Gardé exactement le même style que dans le précédent message, rien à modifier ici) */
-
 @import url('https://fonts.googleapis.com/css2?family=Segoe+UI&display=swap');
 
 .conges-container {
@@ -337,11 +362,10 @@ const filteredConges = computed(() => {
 }
 
 .conge-form {
-  background-color: #121212;
-  border-radius: 14px;
+  background-color: #1f1f1f;
+  border-radius: 12px;
   padding: 2rem;
-  margin-bottom: 2rem;
-  box-shadow: 0 0 12px #00bcd4bb inset;
+  box-shadow: inset 0 0 8px #00bcd4aa;
   position: relative;
   color: #eee;
   max-width: 600px;
@@ -422,30 +446,32 @@ button[type='submit']:hover {
 .conges-liste table {
   width: 100%;
   border-collapse: collapse;
-  background-color: #121212;
-  border-radius: 14px;
-  box-shadow: 0 0 20px rgba(0, 188, 212, 0.25);
+  background-color: #1f1f1f;
+  border-radius: 12px;
+  box-shadow: inset 0 0 8px #00bcd4aa;
   overflow: hidden;
   color: #eee;
 }
 
+
+
 .conges-liste thead {
   background-color: transparent;
-  color: #64b5f6; /* Bleu ciel clair */
+  color: #64b5f6;
 }
 
 .conges-liste th,
 .conges-liste td {
   padding: 1rem;
-  border-bottom: 1px solid #444;
+  /* Suppression des bordures pour un style uniforme */
+  border-bottom: none;
   text-align: left;
 }
 
-.conges-liste tbody tr:hover {
-  background-color: #1a1a2e;
-  cursor: pointer;
+.conges-liste tbody tr {
+  border-bottom: 1px solid transparent;
+  transition: background-color 0.3s ease;
 }
-
 .conges-liste button {
   padding: 0.5rem 1rem;
   border: none;
@@ -459,6 +485,14 @@ button[type='submit']:hover {
 
 .conges-liste button:hover {
   background-color: #cc0044;
+}
+.conges-liste thead th {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 2px solid #00bcd4;
+  font-size: 1.05rem;
+  font-weight: bold;
+  color: #64b5f6;
 }
 
 .badge {
@@ -507,78 +541,132 @@ button[type='submit']:hover {
   padding: 1rem;
 }
 
+/* Modal suppression reste inchangé */
 .modal-content {
   width: 100%;
-  max-width: 400px;
-  background-color: #121212;
+  max-width: 420px;
+  background: linear-gradient(145deg, #181818, #1f1f1f);
   color: #eee;
-  border-radius: 14px;
-  padding: 2rem;
-  box-shadow: 0 0 15px #00bcd4bb;
+  border-radius: 20px;
+  padding: 2.5rem 2rem;
+  box-shadow: 0 6px 18px rgba(0, 188, 212, 0.4);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   text-align: center;
+  position: relative;
 }
-
 .modal-actions {
-  margin-top: 1.5rem;
   display: flex;
   justify-content: center;
   gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .modal-actions button {
-  padding: 0.6rem 1.5rem;
+  padding: 0.8rem 1.6rem;
+  font-size: 1rem;
+  font-weight: bold;
   border-radius: 14px;
-  font-weight: 700;
   border: none;
   cursor: pointer;
   transition: background-color 0.3s ease;
-  font-size: 1rem;
 }
 
 .modal-actions button:first-child {
-  background-color: #ff0055;
+  background-color: #ff3d57;
   color: white;
+  box-shadow: 0 4px 12px rgba(255, 61, 87, 0.3);
 }
 
 .modal-actions button:first-child:hover {
-  background-color: #cc0044;
+  background-color: #d32f2f;
 }
 
 .modal-actions button:last-child {
-  background-color: #555;
-  color: #eee;
+  background-color: #424242;
+  color: #ccc;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
 .modal-actions button:last-child:hover {
-  background-color: #777;
+  background-color: #333;
 }
 
+/* Modal détails du congé (popup infos) */
+.modal-details {
+  width: 100%;
+  max-width: 450px;
+  background: linear-gradient(145deg, #181818, #1f1f1f);
+  border-radius: 20px;
+  padding: 2.5rem 3rem;
+  box-shadow: 0 8px 24px rgba(0, 188, 212, 0.45);
+  color: #e0e0e0;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  user-select: none;
+  text-align: left;
+  position: relative;
+  font-weight: 600;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.modal-details h3 {
+  margin-bottom: 1.2rem;
+  font-size: 1.8rem;
+  color: #00bcd4;
+  text-align: center;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.modal-details p {
+  margin-bottom: 0.9rem;
+}
+
+.btn-close-popup {
+  margin-top: 2rem;
+  width: 100%;
+  padding: 1rem;
+  background-color: #00bcd4;
+  color: #121212;
+  font-weight: 700;
+  border-radius: 16px;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1rem;
+  letter-spacing: 0.04em;
+  box-shadow: 0 6px 16px #00bcd4aa;
+  transition: background-color 0.3s ease;
+}
+
+.btn-close-popup:hover {
+  background-color: #008b99;
+}
+
+/* Avatar employé */
 .employee-avatar {
   width: 36px;
   height: 36px;
   border-radius: 50%;
   color: white;
-  display: inline-flex;
-  align-items: center;
+  font-weight: 700;
+  font-size: 1.2rem;
+  display: flex;
   justify-content: center;
-  font-weight: bold;
-  font-size: 0.9rem;
-  margin-right: 8px;
-  flex-shrink: 0;
-  box-shadow: 0 0 6px #00bcd4aa;
-  cursor: default;
+  align-items: center;
+  user-select: none;
+  text-shadow: 0 0 4px rgba(0,0,0,0.4);
 }
 
 .employe-nom {
-  vertical-align: middle;
+  user-select: text;
   font-weight: 600;
-  font-size: 1rem;
 }
 
+/* Texte si pas de données */
 .no-data {
-  text-align: center;
   color: #888;
   font-style: italic;
+  text-align: center;
   margin-top: 3rem;
 }
 </style>
