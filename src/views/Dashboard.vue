@@ -23,7 +23,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import CardStat from '@/components/CardStat.vue'
+import cardStat from '@/components/cardStat.vue'
 import CongesChart from '@/components/CongesChart.vue'
 import AlertsRH from '@/components/AlertsRH.vue'
 import QuickActions from '@/components/QuickActions.vue'
