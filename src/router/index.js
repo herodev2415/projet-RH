@@ -1,11 +1,11 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Login from '../Views/Login.vue'
-import Dashboard from '../Views/Dashboard.vue'
-import Employes from '../Views/Employes.vue'
-import Contrats from '../Views/Contrats.vue'
-import Conges from '../Views/Conges.vue'
-import Presences from '../Views/Presences.vue'
-import Evaluations from '../Views/Evaluations.vue'
+import Login from '../views/Login.vue'
+import Dashboard from '../views/Dashboard.vue'
+import Employes from '../views/Employes.vue'
+import Contrats from '../views/Contrats.vue'
+import Conges from '../views/Conges.vue'
+import Presences from '../views/Presences.vue'
+import Evaluations from '../views/Evaluations.vue'
 
 const routes = [
   { path: '/', component: Login },
