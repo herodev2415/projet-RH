@@ -2,209 +2,186 @@
   <section class="page presences">
     <h1>Gestion des Présences</h1>
 
-    <form @submit.prevent="ajouterPresence" class="form">
-      <input v-model="nouvellePresence.employe" placeholder="Employé" required />
+    <div class="presence-lists">
+      <div class="list-container">
+        <h2>Présents</h2>
+        <ul>
+          <li v-for="p in presencesPresentes" :key="p.id" class="employee-item">
+            <div
+              class="employee-avatar"
+              :style="{
+                background: `linear-gradient(135deg, ${stringToColor(p.employe)} 0%, ${stringToColor(getSecondName(p.employe))} 100%)`
+              }"
+            >
+              {{ getInitials(p.employe) }}
+            </div>
+            <span class="employee-name">{{ p.employe }}</span>
+          </li>
+        </ul>
+        <p v-if="presencesPresentes.length === 0" class="no-data">Aucun employé présent.</p>
+      </div>
 
-      <input v-model="nouvellePresence.date" type="date" required />
-
-      <input 
-        v-model="nouvellePresence.arrivee" 
-        type="time" 
-        :disabled="nouvellePresence.statut === 'Absent'" 
-        :required="nouvellePresence.statut !== 'Absent'" 
-        placeholder="Heure d'arrivée" 
-      />
-
-      <input 
-        v-model="nouvellePresence.depart" 
-        type="time" 
-        :disabled="nouvellePresence.statut === 'Absent'" 
-        :required="nouvellePresence.statut !== 'Absent'" 
-        placeholder="Heure de départ" 
-      />
-
-      <select v-model="nouvellePresence.statut" required>
-        <option value="">-- Statut --</option>
-        <option>Présent</option>
-        <option>Absent</option>
-        <option>Retard</option>
-        <option>Autre</option>
-      </select>
-      <input v-if="nouvellePresence.statut === 'Autre'" v-model="nouvellePresence.statut" placeholder="Précisez le statut" required />
-
-      <button type="submit">Ajouter</button>
-    </form>
-
-    <table>
-      <thead>
-        <tr>
-          <th>Employé</th>
-          <th>Date</th>
-          <th>Heure d'arrivée</th>
-          <th>Heure de départ</th>
-          <th>Statut</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="presence in presences" :key="presence.id">
-          <td>{{ presence.employe }}</td>
-          <td>{{ presence.date }}</td>
-          <td>{{ presence.arrivee }}</td>
-          <td>{{ presence.depart }}</td>
-          <td>{{ presence.statut }}</td>
-          <td>
-            <button @click="modifierPresence(presence)">Modifier</button>
-            <button @click="supprimerPresence(presence.id)">Supprimer</button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+      <div class="list-container">
+        <h2>Absents</h2>
+        <ul>
+          <li v-for="p in presencesAbsents" :key="p.id" class="employee-item">
+            <div
+              class="employee-avatar"
+              :style="{
+                background: `linear-gradient(135deg, ${stringToColor(p.employe)} 0%, ${stringToColor(getSecondName(p.employe))} 100%)`
+              }"
+            >
+              {{ getInitials(p.employe) }}
+            </div>
+            <span class="employee-name">{{ p.employe }}</span>
+          </li>
+        </ul>
+        <p v-if="presencesAbsents.length === 0" class="no-data">Aucun employé absent.</p>
+      </div>
+    </div>
   </section>
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, computed } from 'vue'
 
-const presences = ref([]);
-const nouvellePresence = ref({
-  id: null,
-  employe: '',
-  date: '',
-  arrivee: '',
-  depart: '',
-  statut: ''
-});
+const presences = ref([])
 
 onMounted(() => {
-  const sauvegarde = localStorage.getItem('presences');
-  presences.value = sauvegarde ? JSON.parse(sauvegarde) : [];
-});
+  const sauvegarde = localStorage.getItem('presences')
+  presences.value = sauvegarde ? JSON.parse(sauvegarde) : []
+})
 
-watch(presences, (val) => {
-  localStorage.setItem('presences', JSON.stringify(val));
-}, { deep: true });
+const presencesPresentes = computed(() =>
+  presences.value
+    .filter(p => p.statut.toLowerCase() === 'présent')
+    .sort((a, b) => a.employe.localeCompare(b.employe))
+)
 
-function ajouterPresence() {
-  if (nouvellePresence.value.statut !== 'Absent') {
-    if (!nouvellePresence.value.arrivee || !nouvellePresence.value.depart) {
-      alert("Veuillez renseigner l'heure d'arrivée et de départ.");
-      return;
-    }
-  } else {
-    // Si Absent, on force les champs arrivee/depart à "-" pour plus de clarté (optionnel)
-    nouvellePresence.value.arrivee = '-';
-    nouvellePresence.value.depart = '-';
+const presencesAbsents = computed(() =>
+  presences.value
+    .filter(p => p.statut.toLowerCase() === 'absent')
+    .sort((a, b) => a.employe.localeCompare(b.employe))
+)
+
+// Utilitaires pour avatar
+function stringToColor(str) {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash)
   }
-
-  if (nouvellePresence.value.id !== null) {
-    const index = presences.value.findIndex(p => p.id === nouvellePresence.value.id);
-    if (index !== -1) presences.value[index] = { ...nouvellePresence.value };
-  } else {
-    nouvellePresence.value.id = Date.now();
-    presences.value.push({ ...nouvellePresence.value });
-  }
-  resetForm();
+  const hue = Math.abs(hash % 360)
+  return `hsl(${hue}, 70%, 60%)`
 }
 
-function modifierPresence(presence) {
-  nouvellePresence.value = { ...presence };
+function getInitials(fullName) {
+  const parts = fullName.trim().split(' ')
+  const firstInitial = parts[0]?.charAt(0).toUpperCase() || ''
+  const secondInitial = parts[1]?.charAt(0).toUpperCase() || ''
+  return firstInitial + secondInitial
 }
 
-function supprimerPresence(id) {
-  presences.value = presences.value.filter(p => p.id !== id);
-}
-
-function resetForm() {
-  nouvellePresence.value = {
-    id: null,
-    employe: '',
-    date: '',
-    arrivee: '',
-    depart: '',
-    statut: ''
-  };
+function getSecondName(fullName) {
+  const parts = fullName.trim().split(' ')
+  return parts[1] || parts[0] || ''
 }
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Segoe+UI&display=swap');
+
 .page {
+  max-width: 900px;
+  margin: 2rem auto;
   padding: 2rem;
-  color: #004070;
+  background-color: #121212;
+  border-radius: 14px;
+  box-shadow: 0 0 20px rgba(0, 188, 212, 0.25);
+  color: #eee;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 h1 {
-  margin-bottom: 1.5rem;
-  font-weight: 700;
-}
-
-.form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
   margin-bottom: 2rem;
+  font-weight: 700;
+  color: #00bcd4;
+  text-align: center;
+  user-select: none;
 }
 
-.form input, .form select {
-  padding: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 6px;
+.presence-lists {
+  display: flex;
+  gap: 3rem;
+  justify-content: center;
+}
+
+.list-container {
+  background-color: #1f1f1f;
+  padding: 1.5rem 1.8rem;
+  border-radius: 14px;
+  box-shadow: inset 0 0 8px #00bcd4aa;
   flex: 1;
+  max-width: 400px;
+  color: #eee;
 }
 
-.form button {
-  background-color: #004070;
+.list-container h2 {
+  margin-bottom: 1.2rem;
+  font-weight: 700;
+  color: #00bcd4;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  user-select: none;
+}
+
+.list-container ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.employee-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.7rem 1rem;
+  margin-bottom: 0.6rem;
+  background: linear-gradient(135deg, #00bcd4 0%, #008b99 100%);
+  border-radius: 12px;
+  font-weight: 700;
+  color: #121212;
+  user-select: text;
+  box-shadow: 0 3px 8px #00bcd4aa;
+  cursor: default;
+  transition: background-color 0.3s ease;
+}
+
+.employee-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
   color: white;
-  border: none;
-  padding: 0.6rem 1.2rem;
-  border-radius: 6px;
-  cursor: pointer;
-  flex-grow: 0;
-  flex-shrink: 0;
-  width: 120px;
+  font-weight: 900;
+  font-size: 1.3rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-shadow: 0 0 5px rgba(0, 0, 0, 0.4);
+  user-select: none;
+  box-shadow: 0 0 10px #00bcd4bb;
 }
 
-.form button:hover {
-  background-color: #0060a0;
+.employee-name {
+  flex-grow: 1;
+  user-select: text;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  background-color: #e6f0fa;
-  border-radius: 10px;
-  box-shadow: 0 4px 10px rgb(0 64 112 / 0.1);
-  overflow: hidden;
-}
-
-thead {
-  background-color: #004070;
-  color: white;
-}
-
-th, td {
-  padding: 1rem;
-  text-align: left;
-  border-bottom: 1px solid #b0c4de;
-}
-
-tbody tr:hover {
-  background-color: #c8dafc;
-  cursor: pointer;
-}
-
-button {
-  margin-right: 0.5rem;
-  padding: 0.4rem 0.8rem;
-  border: none;
-  border-radius: 4px;
-  background-color: #e60826;
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-button:hover {
-  background-color: #c40620;
+.no-data {
+  font-style: italic;
+  color: #777;
+  text-align: center;
+  margin-top: 1rem;
+  user-select: none;
 }
 </style>

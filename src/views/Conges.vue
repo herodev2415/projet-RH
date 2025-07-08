@@ -121,8 +121,10 @@
           <p><strong>Motif :</strong> {{ popupConge.motif || '-' }}</p>
           <p><strong>Statut :</strong> {{ popupConge.statut }}</p>
           <p>
-            <strong>Jours restants :</strong> 
-            <span v-if="joursRestants(popupConge.dateFin) > 0">{{ joursRestants(popupConge.dateFin) }} jour(s)</span>
+            <strong>Jours restants :</strong>
+              <span v-if="joursRestants(popupConge.dateDebut, popupConge.dateFin) > 0">
+                {{ joursRestants(popupConge.dateDebut, popupConge.dateFin) }} jour(s)
+              </span>
             <span v-else>Congé terminé</span>
           </p>
           <button class="btn-close-popup" @click="fermerPopup">
@@ -267,11 +269,20 @@ function calcDuree(dateDebut, dateFin) {
   return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1
 }
 
-function joursRestants(dateFin) {
+// ✅ Correction ici : on ignore l'heure pour les comparaisons
+function joursRestants(dateDebut, dateFin) {
   const today = new Date()
+  const debut = new Date(dateDebut)
   const fin = new Date(dateFin)
+
+  today.setHours(0, 0, 0, 0)
+  debut.setHours(0, 0, 0, 0)
+  fin.setHours(0, 0, 0, 0)
+
+  if (today > fin) return 0
+  if (today < debut) return calcDuree(dateDebut, dateFin)
+
   const diffTime = fin - today
-  if (diffTime < 0) return 0
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 }
 
@@ -298,6 +309,7 @@ const filteredConges = computed(() => {
   return result.sort((a, b) => new Date(a.dateDebut) - new Date(b.dateDebut))
 })
 </script>
+
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Segoe+UI&display=swap');
@@ -589,7 +601,7 @@ button[type='submit']:hover {
 
 .modal-actions button:last-child:hover {
   background-color: #333;
-}
+} 
 
 /* Modal détails du congé (popup infos) */
 .modal-details {
