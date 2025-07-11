@@ -1,4 +1,4 @@
-<!-- components/CardStat.vue -->
+
 <template>
   <div class="cardstat" :style="{ backgroundColor: color }">
     <h3>{{ title }}</h3>
